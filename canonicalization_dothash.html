@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hash Methods Tutorial: Canonicalization, DotHash & Interwoven DotHash</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .tutorial-section {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .tutorial-section:hover {
+            transform: translateY(-5px);
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            color: #4a5568;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .demo-container {
+            background: #f7fafc;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #667eea;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #4a5568;
+        }
+
+        .input-group input, .input-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .input-group input:focus, .input-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .result-box {
+            background: #1a202c;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            margin-top: 15px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .step-indicator {
+            display: flex;
+            align-items: center;
+            margin: 15px 0;
+            padding: 15px;
+            background: #edf2f7;
+            border-radius: 8px;
+            border-left: 4px solid #48bb78;
+        }
+
+        .step-number {
+            background: #48bb78;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .comparison-item {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #e2e8f0;
+        }
+
+        .comparison-item h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+
+        .highlight {
+            background: #fef5e7;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+            color: #744210;
+        }
+
+        .visual-demo {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .hash-block {
+            background: #667eea;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .hash-block:hover {
+            background: #5a67d8;
+            transform: scale(1.05);
+        }
+
+        .arrow {
+            font-size: 1.5rem;
+            color: #667eea;
+            margin: 0 10px;
+            align-self: center;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .tutorial-section {
+                padding: 20px;
+            }
+            
+            .comparison-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 Hash Methods Tutorial</h1>
+            <p>Learn Canonicalization, DotHash, and Interwoven DotHash with Interactive Examples</p>
+        </div>
+
+        <!-- Canonicalization Section -->
+        <div class="tutorial-section">
+            <h2 class="section-title">1. Canonicalization</h2>
+            <p><strong>Canonicalization</strong> is the process of converting data into a standard, normalized format before hashing. This ensures that equivalent data produces the same hash value regardless of formatting differences.</p>
+            
+            <div class="demo-container">
+                <h3>🎯 Interactive Demo: Text Canonicalization</h3>
+                <div class="input-group">
+                    <label for="canon-input">Enter text to canonicalize:</label>
+                    <textarea id="canon-input" rows="3" placeholder="Try: '  Hello   World!  ' or 'hello world' or 'HELLO WORLD'">  Hello   World!  </textarea>
+                </div>
+                <button class="btn" onclick="demonstrateCanonicalization()">Canonicalize & Hash</button>
+                
+                <div class="step-indicator">
+                    <div class="step-number">1</div>
+                    <div>
+                        <strong>Original:</strong> <span id="original-text"></span><br>
+                        <strong>Canonicalized:</strong> <span id="canonical-text"></span><br>
+                        <strong>Hash:</strong> <span id="canonical-hash"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="comparison-grid">
+                <div class="comparison-item">
+                    <h4>✅ Benefits</h4>
+                    <ul>
+                        <li>Consistent hashing across formats</li>
+                        <li>Reduces hash collisions from formatting</li>
+                        <li>Enables reliable data comparison</li>
+                    </ul>
+                </div>
+                <div class="comparison-item">
+                    <h4>🔧 Common Rules</h4>
+                    <ul>
+                        <li>Trim whitespace</li>
+                        <li>Convert to lowercase</li>
+                        <li>Normalize line endings</li>
+                        <li>Remove extra spaces</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- DotHash Section -->
+        <div class="tutorial-section">
+            <h2 class="section-title">2. DotHash Method</h2>
+            <p><strong>DotHash</strong> is a hierarchical hashing technique that creates hash values for nested data structures by combining hashes at each level, often using dots as separators in the conceptual path.</p>
+            
+            <div class="demo-container">
+                <h3>🎯 Interactive Demo: DotHash Generation</h3>
+                <div class="input-group">
+                    <label for="dothash-input">Enter JSON-like data:</label>
+                    <textarea id="dothash-input" rows="4" placeholder='{"user": {"name": "Alice", "age": 30}, "settings": {"theme": "dark"}}'>{
+  "user": {
+    "name": "Alice",
+    "age": 30
+  },
+  "settings": {
+    "theme": "dark"
+  }
+}</textarea>
+                </div>
+                <button class="btn" onclick="demonstrateDotHash()">Generate DotHash</button>
+                
+                <div id="dothash-steps"></div>
+                <div class="result-box" id="dothash-result"></div>
+            </div>
+
+            <div class="comparison-grid">
+                <div class="comparison-item">
+                    <h4>🌟 Key Features</h4>
+                    <ul>
+                        <li>Hierarchical hash computation</li>
+                        <li>Path-based hash identification</li>
+                        <li>Efficient partial updates</li>
+                    </ul>
+                </div>
+                <div class="comparison-item">
+                    <h4>📊 Use Cases</h4>
+                    <ul>
+                        <li>Configuration management</li>
+                        <li>Document versioning</li>
+                        <li>API response caching</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Interwoven DotHash Section -->
+        <div class="tutorial-section">
+            <h2 class="section-title">3. Interwoven DotHash Method</h2>
+            <p><strong>Interwoven DotHash</strong> extends the DotHash concept by creating interdependent hash chains where each hash incorporates elements from multiple paths, creating a more secure and tamper-evident structure.</p>
+            
+            <div class="demo-container">
+                <h3>🎯 Interactive Demo: Interwoven DotHash</h3>
+                <div class="input-group">
+                    <label for="interwoven-input">Enter structured data:</label>
+                    <textarea id="interwoven-input" rows="4" placeholder='{"a": {"x": 1, "y": 2}, "b": {"x": 3, "y": 4}}'>{
+  "a": {
+    "x": 1,
+    "y": 2
+  },
+  "b": {
+    "x": 3,
+    "y": 4
+  }
+}</textarea>
+                </div>
+                <button class="btn" onclick="demonstrateInterwovenDotHash()">Generate Interwoven DotHash</button>
+                
+                <div id="interwoven-steps"></div>
+                <div class="result-box" id="interwoven-result"></div>
+            </div>
+
+            <div class="comparison-grid">
+                <div class="comparison-item">
+                    <h4>🔒 Security Benefits</h4>
+                    <ul>
+                        <li>Cross-path hash dependencies</li>
+                        <li>Enhanced tamper detection</li>
+                        <li>Cryptographic integrity chains</li>
+                    </ul>
+                </div>
+                <div class="comparison-item">
+                    <h4>⚡ Advanced Features</h4>
+                    <ul>
+                        <li>Parallel hash computation</li>
+                        <li>Selective verification</li>
+                        <li>Incremental updates</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Comparison Section -->
+        <div class="tutorial-section">
+            <h2 class="section-title">4. Method Comparison</h2>
+            <div class="demo-container">
+                <h3>🔍 Compare All Methods</h3>
+                <div class="input-group">
+                    <label for="compare-input">Test data for all methods:</label>
+                    <textarea id="compare-input" rows="3" placeholder='{"name": "  John Doe  ", "data": {"value": 42}}'>{
+  "name": "  John Doe  ",
+  "data": {
+    "value": 42
+  }
+}</textarea>
+                </div>
+                <button class="btn" onclick="compareAllMethods()">Compare All Methods</button>
+                
+                <div class="comparison-grid" id="comparison-results">
+                    <!-- Results will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simple hash function for demonstration (not cryptographically secure)
+        function simpleHash(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                const char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash; // Convert to 32-bit integer
+            }
+            return Math.abs(hash).toString(16).padStart(8, '0');
+        }
+
+        // Canonicalization function
+        function canonicalize(text) {
+            return text
+                .toLowerCase()
+                .trim()
+                .replace(/\s+/g, ' ')
+                .replace(/\r\n/g, '\n');
+        }
+
+        function demonstrateCanonicalization() {
+            const input = document.getElementById('canon-input').value;
+            const canonical = canonicalize(input);
+            const hash = simpleHash(canonical);
+            
+            document.getElementById('original-text').textContent = `"${input}"`;
+            document.getElementById('canonical-text').textContent = `"${canonical}"`;
+            document.getElementById('canonical-hash').textContent = hash;
+        }
+
+        // DotHash implementation
+        function generateDotHash(obj, path = '') {
+            const results = {};
+            
+            if (typeof obj !== 'object' || obj === null) {
+                const hash = simpleHash(canonicalize(String(obj)));
+                results[path || 'root'] = hash;
+                return results;
+            }
+            
+            for (const [key, value] of Object.entries(obj)) {
+                const currentPath = path ? `${path}.${key}` : key;
+                const subResults = generateDotHash(value, currentPath);
+                Object.assign(results, subResults);
+            }
+            
+            // Generate hash for current level
+            const levelHash = simpleHash(Object.keys(obj).sort().join('') + Object.values(results).join(''));
+            results[path || 'root'] = levelHash;
+            
+            return results;
+        }
+
+        function demonstrateDotHash() {
+            try {
+                const input = document.getElementById('dothash-input').value;
+                const data = JSON.parse(input);
+                const hashes = generateDotHash(data);
+                
+                let stepsHtml = '';
+                let resultText = 'DotHash Results:\n';
+                
+                Object.entries(hashes).forEach(([path, hash], index) => {
+                    stepsHtml += `
+                        <div class="step-indicator">
+                            <div class="step-number">${index + 1}</div>
+                            <div>
+                                <strong>Path:</strong> <span class="highlight">${path}</span><br>
+                                <strong>Hash:</strong> <code>${hash}</code>
+                            </div>
+                        </div>
+                    `;
+                    resultText += `${path}: ${hash}\n`;
+                });
+                
+                document.getElementById('dothash-steps').innerHTML = stepsHtml;
+                document.getElementById('dothash-result').textContent = resultText;
+            } catch (e) {
+                document.getElementById('dothash-result').textContent = 'Error: Invalid JSON format';
+            }
+        }
+
+        // Interwoven DotHash implementation
+        function generateInterwovenDotHash(obj, path = '') {
+            const results = {};
+            const allPaths = [];
+            
+            // First pass: collect all paths
+            function collectPaths(obj, currentPath = '') {
+                if (typeof obj !== 'object' || obj === null) {
+                    allPaths.push(currentPath || 'root');
+                    return;
+                }
+                
+                for (const [key, value] of Object.entries(obj)) {
+                    const newPath = currentPath ? `${currentPath}.${key}` : key;
+                    collectPaths(value, newPath);
+                }
+            }
+            
+            collectPaths(obj);
+            
+            // Second pass: generate interwoven hashes
+            function generateHashes(obj, currentPath = '', depth = 0) {
+                if (typeof obj !== 'object' || obj === null) {
+                    // Interweave with other paths at similar depth
+                    const siblingPaths = allPaths.filter(p => p.split('.').length === (currentPath.split('.').length));
+                    const interwovenData = canonicalize(String(obj)) + siblingPaths.join('');
+                    const hash = simpleHash(interwovenData);
+                    results[currentPath || 'root'] = hash;
+                    return hash;
+                }
+                
+                const childHashes = [];
+                for (const [key, value] of Object.entries(obj)) {
+                    const newPath = currentPath ? `${currentPath}.${key}` : key;
+                    const childHash = generateHashes(value, newPath, depth + 1);
+                    childHashes.push(childHash);
+                }
+                
+                // Create interwoven hash for current level
+                const levelData = Object.keys(obj).sort().join('') + childHashes.join('') + allPaths.join('');
+                const hash = simpleHash(levelData);
+                results[currentPath || 'root'] = hash;
+                return hash;
+            }
+            
+            generateHashes(obj);
+            return results;
+        }
+
+        function demonstrateInterwovenDotHash() {
+            try {
+                const input = document.getElementById('interwoven-input').value;
+                const data = JSON.parse(input);
+                const hashes = generateInterwovenDotHash(data);
+                
+                let stepsHtml = '';
+                let resultText = 'Interwoven DotHash Results:\n';
+                
+                Object.entries(hashes).forEach(([path, hash], index) => {
+                    stepsHtml += `
+                        <div class="step-indicator">
+                            <div class="step-number">${index + 1}</div>
+                            <div>
+                                <strong>Interwoven Path:</strong> <span class="highlight">${path}</span><br>
+                                <strong>Hash:</strong> <code>${hash}</code><br>
+                                <small style="color: #666;">Includes cross-path dependencies</small>
+                            </div>
+                        </div>
+                    `;
+                    resultText += `${path}: ${hash}\n`;
+                });
+                
+                document.getElementById('interwoven-steps').innerHTML = stepsHtml;
+                document.getElementById('interwoven-result').textContent = resultText;
+            } catch (e) {
+                document.getElementById('interwoven-result').textContent = 'Error: Invalid JSON format';
+            }
+        }
+
+        function compareAllMethods() {
+            try {
+                const input = document.getElementById('compare-input').value;
+                const data = JSON.parse(input);
+                
+                // Method 1: Simple Canonicalization
+                const canonicalData = canonicalize(JSON.stringify(data));
+                const canonicalHash = simpleHash(canonicalData);
+                
+                // Method 2: DotHash
+                const dotHashes = generateDotHash(data);
+                
+                // Method 3: Interwoven DotHash
+                const interwovenHashes = generateInterwovenDotHash(data);
+                
+                const resultsContainer = document.getElementById('comparison-results');
+                resultsContainer.innerHTML = `
+                    <div class="comparison-item">
+                        <h4>🔤 Canonicalization</h4>
+                        <p><strong>Single Hash:</strong></p>
+                        <code style="word-break: break-all;">${canonicalHash}</code>
+                        <p style="margin-top: 10px;"><small>Simple, fast, but limited granularity</small></p>
+                    </div>
+                    
+                    <div class="comparison-item">
+                        <h4>🔗 DotHash</h4>
+                        <p><strong>Hierarchical Hashes:</strong></p>
+                        ${Object.entries(dotHashes).map(([path, hash]) => 
+                            `<div style="margin: 5px 0;"><code>${path}</code>: <code style="color: #667eea;">${hash}</code></div>`
+                        ).join('')}
+                        <p style="margin-top: 10px;"><small>Granular, efficient updates</small></p>
+                    </div>
+                    
+                    <div class="comparison-item">
+                        <h4>🔐 Interwoven DotHash</h4>
+                        <p><strong>Interdependent Hashes:</strong></p>
+                        ${Object.entries(interwovenHashes).map(([path, hash]) => 
+                            `<div style="margin: 5px 0;"><code>${path}</code>: <code style="color: #764ba2;">${hash}</code></div>`
+                        ).join('')}
+                        <p style="margin-top: 10px;"><small>Most secure, tamper-evident</small></p>
+                    </div>
+                `;
+            } catch (e) {
+                document.getElementById('comparison-results').innerHTML = `
+                    <div class="comparison-item">
+                        <h4>❌ Error</h4>
+                        <p>Invalid JSON format. Please check your input.</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Initialize with default demonstrations
+        window.onload = function() {
+            demonstrateCanonicalization();
+            demonstrateDotHash();
+            demonstrateInterwovenDotHash();
+            compareAllMethods();
+        };
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96a70b5e05a29c32',t:'MTc1NDQwNDc3MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
